@@ -37,9 +37,13 @@ export const createTransaction = async ({
   return response.json();
 };
 
-export const getTransactions = async (id: string) => {
+export const getTransactions = async (
+  id: string,
+  page: number = 1,
+  limit: number = 10
+) => {
   const response = await fetch(
-    `${API_URL}/accounts/${id}/transactions?page=${1}&limit=${10}`
+    `${API_URL}/accounts/${id}/transactions?page=${page}&limit=${limit}`
   );
 
   if (!response.ok) {

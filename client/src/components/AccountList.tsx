@@ -56,6 +56,9 @@ export function AccountList() {
     null
   );
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalTransactions, setTotalTransactions] = useState<number>(0);
 
   // Data fetching - Consider implementing retry logic, caching, and better error handling
   const fetchAccounts = async () => {
@@ -129,12 +132,20 @@ export function AccountList() {
     setInputError({ type: "", amount: "", description: "" });
   };
 
+  const handlePageChange = (newPage: number) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setCurrentPage(newPage);
+  };
+
   const handleCloseViewModal = () => {
     if (transactionsLoading) return;
     setOpenViewTransactionModal(false);
     setAccountId("");
     setTransactions([]);
     setTransactionsError(null);
+    setCurrentPage(1);
+    setTotalPages(1);
+    setTotalTransactions(0);
   };
 
   useEffect(() => {
@@ -142,10 +153,13 @@ export function AccountList() {
 
     setTransactionsLoading(true);
     setTransactionsError(null);
-    getTransactions(accountId)
+    getTransactions(accountId, currentPage, 10)
       .then((res) => {
         const list = res?.data?.transactions ?? [];
+        const pagination = res?.data?.pagination;
         setTransactions(list);
+        setTotalPages(pagination?.totalPages || 1);
+        setTotalTransactions(pagination?.totalTransactions || 0);
       })
       .catch((err) => {
         setTransactionsError(
@@ -153,7 +167,7 @@ export function AccountList() {
         );
       })
       .finally(() => setTransactionsLoading(false));
-  }, [openViewTransactionModal, accountId]);
+  }, [openViewTransactionModal, accountId, currentPage]);
 
   // Basic loading and error states - Consider implementing skeleton loading and error boundaries
   if (loading) return <div>Loading...</div>;
@@ -302,7 +316,7 @@ export function AccountList() {
       )}
 
       {/* Transactions Modal */}
-      {openViewTransactionModal && (
+      {/* {openViewTransactionModal && (
         <div className={styles.modal}>
           <div className={styles.modalInner}>
             <div
@@ -315,7 +329,9 @@ export function AccountList() {
                 position: "relative",
               }}
             >
-              <h3 style={{ color: "gray", fontSize: "20px" }}>Transactions</h3>
+              <h3 style={{ color: "gray", fontSize: "20px" }}>
+                Transactions ({totalTransactions})
+              </h3>
               <span
                 onClick={handleCloseViewModal}
                 style={{
@@ -353,30 +369,144 @@ export function AccountList() {
             {!transactionsLoading &&
               !transactionsError &&
               transactions.length > 0 && (
-                <div className={styles.tableWrapper}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Description</th>
-                        <th style={{ textAlign: "right" }}>Amount ($)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {transactions.map((t) => (
-                        <tr key={t.id}>
-                          <td>{new Date(t.date).toDateString()}</td>
-                          <td>{t.type}</td>
-                          <td>{t.description}</td>
-                          <td style={{ textAlign: "right" }}>
-                            {Number(t.amount).toFixed(2)}
-                          </td>
+                <>
+                  <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Type</th>
+                          <th>Description</th>
+                          <th style={{ textAlign: "right" }}>Amount ($)</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {transactions.map((t) => (
+                          <tr key={t.id}>
+                            <td>{new Date(t.date).toDateString()}</td>
+                            <td>{t.type}</td>
+                            <td>{t.description}</td>
+                            <td style={{ textAlign: "right" }}>
+                              {Number(t.amount).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+          </div>
+        </div>
+      )} */}
+
+      {/* Transactions Modal */}
+      {openViewTransactionModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalInner}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100%",
+                height: "2rem",
+                alignItems: "center",
+                position: "relative",
+              }}
+            >
+              <h3 style={{ color: "gray", fontSize: "20px" }}>
+                Transactions ({totalTransactions})
+              </h3>
+              <span
+                onClick={handleCloseViewModal}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  color: "black",
+                  position: "absolute",
+                  right: 10,
+                  top: 0,
+                }}
+              >
+                X
+              </span>
+            </div>
+
+            {transactionsLoading && (
+              <div className={styles.state}>Loading transactions...</div>
+            )}
+
+            {!transactionsLoading && transactionsError && (
+              <div className={`${styles.state} ${styles.error}`}>
+                {transactionsError}
+              </div>
+            )}
+
+            {!transactionsLoading &&
+              !transactionsError &&
+              transactions.length === 0 && (
+                <div className={styles.state}>No transactions found.</div>
+              )}
+
+            {!transactionsLoading &&
+              !transactionsError &&
+              transactions.length > 0 && (
+                <>
+                  <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Type</th>
+                          <th>Description</th>
+                          <th style={{ textAlign: "right" }}>Amount ($)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {transactions.map((t) => (
+                          <tr key={t.id}>
+                            <td>{new Date(t.date).toDateString()}</td>
+                            <td>{t.type}</td>
+                            <td>{t.description}</td>
+                            <td style={{ textAlign: "right" }}>
+                              {Number(t.amount).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalPages > 1 && (
+                    <div className={styles.pagination}>
+                      <button
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        disabled={currentPage === 1 || transactionsLoading}
+                        className={styles.paginationButton}
+                      >
+                        Previous
+                      </button>
+
+                      <span className={styles.pageInfo}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        disabled={
+                          currentPage === totalPages || transactionsLoading
+                        }
+                        className={styles.paginationButton}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
           </div>
         </div>

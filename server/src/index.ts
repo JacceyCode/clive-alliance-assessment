@@ -170,11 +170,11 @@ app.get(
     try {
       const { id } = req.params;
       const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 100;
+      const limit = parseInt(req.query.limit as string) || 10;
       const offset = (page - 1) * limit;
 
       // Validate pagination parameters
-      if (page < 1 || limit < 1 || limit > 100) {
+      if (page < 1 || limit < 1 || limit > 10) {
         res.status(400).json({
           type: "Error",
           message:
