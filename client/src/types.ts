@@ -23,3 +23,12 @@ export interface createTransactionInput {
   accountId: string;
   transactionData: Transaction;
 }
+
+export interface TransactionRow {
+  id: number;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  accountId: string;
+  date: string;
+}

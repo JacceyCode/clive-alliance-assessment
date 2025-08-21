@@ -24,8 +24,8 @@
  */
 
 import { useState, useEffect } from "react";
-import { Account } from "../types";
-import { createTransaction, getAccounts } from "../api";
+import { Account, TransactionRow } from "../types";
+import { createTransaction, getAccounts, getTransactions } from "../api";
 import styles from "./AccountList.module.css";
 import { Transaction } from "./../types";
 
@@ -34,7 +34,10 @@ export function AccountList() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [openModal, setOpenModal] = useState<boolean>(false);
+  const [openCreateTransactionModal, setOpenCreateTransactionModal] =
+    useState<boolean>(false);
+  const [openViewTransactionModal, setOpenViewTransactionModal] =
+    useState<boolean>(false);
   const [accountId, setAccountId] = useState<string>("");
   const [transactionData, setTransactionData] = useState<Transaction>({
     type: "", // Default to a valid TransactionType
@@ -46,6 +49,13 @@ export function AccountList() {
     amount: string;
     description: string;
   }>({ type: "", amount: "", description: "" });
+
+  const [transactionsLoading, setTransactionsLoading] =
+    useState<boolean>(false);
+  const [transactionsError, setTransactionsError] = useState<string | null>(
+    null
+  );
+  const [transactions, setTransactions] = useState<TransactionRow[]>([]);
 
   // Data fetching - Consider implementing retry logic, caching, and better error handling
   const fetchAccounts = async () => {
@@ -109,7 +119,7 @@ export function AccountList() {
   const handleCloseModal = () => {
     if (loading) return;
 
-    setOpenModal(false);
+    setOpenCreateTransactionModal(false);
     setAccountId("");
     setTransactionData({
       type: "",
@@ -118,6 +128,32 @@ export function AccountList() {
     });
     setInputError({ type: "", amount: "", description: "" });
   };
+
+  const handleCloseViewModal = () => {
+    if (transactionsLoading) return;
+    setOpenViewTransactionModal(false);
+    setAccountId("");
+    setTransactions([]);
+    setTransactionsError(null);
+  };
+
+  useEffect(() => {
+    if (!openViewTransactionModal && !accountId) return;
+
+    setTransactionsLoading(true);
+    setTransactionsError(null);
+    getTransactions(accountId)
+      .then((res) => {
+        const list = res?.data?.transactions ?? [];
+        setTransactions(list);
+      })
+      .catch((err) => {
+        setTransactionsError(
+          err instanceof Error ? err.message : "An error occurred"
+        );
+      })
+      .finally(() => setTransactionsLoading(false));
+  }, [openViewTransactionModal, accountId]);
 
   // Basic loading and error states - Consider implementing skeleton loading and error boundaries
   if (loading) return <div>Loading...</div>;
@@ -145,12 +181,19 @@ export function AccountList() {
                 <button
                   onClick={() => {
                     setAccountId(account.id);
-                    setOpenModal(true);
+                    setOpenCreateTransactionModal(true);
                   }}
                 >
                   Add transaction
                 </button>
-                <button>View transaction</button>
+                <button
+                  onClick={() => {
+                    setAccountId(account.id);
+                    setOpenViewTransactionModal(true);
+                  }}
+                >
+                  View transaction
+                </button>
               </div>
             </div>
           ))}
@@ -158,7 +201,7 @@ export function AccountList() {
       </div>
 
       {/* Create Transaction Modal */}
-      {openModal && (
+      {openCreateTransactionModal && (
         <div className={styles.modal}>
           <div className={styles.modalInner}>
             <div
@@ -259,6 +302,85 @@ export function AccountList() {
       )}
 
       {/* Transactions Modal */}
+      {openViewTransactionModal && (
+        <div className={styles.modal}>
+          <div className={styles.modalInner}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                width: "100%",
+                height: "2rem",
+                alignItems: "center",
+                position: "relative",
+              }}
+            >
+              <h3 style={{ color: "gray", fontSize: "20px" }}>Transactions</h3>
+              <span
+                onClick={handleCloseViewModal}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  color: "black",
+                  position: "absolute",
+                  right: 10,
+                  top: 0,
+                }}
+              >
+                X
+              </span>
+            </div>
+
+            {transactionsLoading && (
+              <div className={styles.state}>Loading transactions...</div>
+            )}
+
+            {!transactionsLoading && transactionsError && (
+              <div className={`${styles.state} ${styles.error}`}>
+                {transactionsError}
+              </div>
+            )}
+
+            {!transactionsLoading &&
+              !transactionsError &&
+              transactions.length === 0 && (
+                <div className={styles.state}>No transactions found.</div>
+              )}
+
+            {!transactionsLoading &&
+              !transactionsError &&
+              transactions.length > 0 && (
+                <div className={styles.tableWrapper}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th style={{ textAlign: "right" }}>Amount ($)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((t) => (
+                        <tr key={t.id}>
+                          <td>{new Date(t.date).toDateString()}</td>
+                          <td>{t.type}</td>
+                          <td>{t.description}</td>
+                          <td style={{ textAlign: "right" }}>
+                            {Number(t.amount).toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
     </>
   );
 }
