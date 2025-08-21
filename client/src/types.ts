@@ -6,3 +6,20 @@ export interface Account {
   accountHolder: string;
   createdAt: string;
 }
+
+export enum TransactionType {
+  DEPOSIT = "DEPOSIT",
+  WITHDRAWAL = "WITHDRAWAL",
+  TRANSFER = "TRANSFER",
+}
+
+export interface Transaction {
+  type: TransactionType | "";
+  amount: number;
+  description: string;
+}
+
+export interface createTransactionInput {
+  accountId: string;
+  transactionData: Transaction;
+}
